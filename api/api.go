@@ -10,6 +10,8 @@ func Start(){
 	shortener := url.NewShortener()
 	http.HandleFunc("/shorten", shortener.ShortenHandler)
 	http.HandleFunc("/r/", shortener.RedirectionHandler)
+	http.HandleFunc("/metrics", shortener.MetricsHandler)
+
 	port := 8084
 	fmt.Printf("Starting server on port %d...\n", port)
 	http.ListenAndServe(fmt.Sprintf(":%d", port), nil)

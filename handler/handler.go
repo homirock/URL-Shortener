@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"math/rand"
 	"net/http"
+	"net/url"
+	"sort"
 	"time"
 )
 
@@ -59,6 +61,52 @@ func (s *Shortener) RedirectionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, originalURL, http.StatusSeeOther)
+}
+
+func (s *Shortener) MetricsHandler(w http.ResponseWriter, r *http.Request) {
+	domainCount := s.CalculateDomainStatistics()
+	topDomains := getTopDomains(domainCount, 3)
+
+	responseData := struct {
+		TopDomains []string `json:"top_domains"`
+	}{
+		TopDomains: topDomains,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(responseData)
+}
+
+func (s *Shortener) CalculateDomainStatistics() map[string]int {
+	domainCount := make(map[string]int)
+	for _, originalURL := range s.urlMap {
+		u, err := url.Parse(originalURL)
+		if err != nil {
+			continue
+		}
+		host := u.Host
+		domainCount[host]++
+	}
+	return domainCount
+}
+
+func getTopDomains(domainCount map[string]int, n int) []string {
+	var topDomains []string
+	type domainStat struct {
+		domain string
+		count  int
+	}
+	var domainStats []domainStat
+	for domain, count := range domainCount {
+		domainStats = append(domainStats, domainStat{domain, count})
+	}
+	sort.Slice(domainStats, func(i, j int) bool {
+		return domainStats[i].count > domainStats[j].count
+	})
+	for i := 0; i < n && i < len(domainStats); i++ {
+		topDomains = append(topDomains, domainStats[i].domain)
+	}
+	return topDomains
 }
 
 func generateShortURL() string {

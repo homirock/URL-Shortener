@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -146,5 +147,54 @@ func TestMetricsHandler(t *testing.T) {
 		if domain != expectedTopDomains[i] {
 			t.Errorf("Top domain mismatch at index %d: got %s, want %s", i, domain, expectedTopDomains[i])
 		}
+	}
+}
+
+func TestShortenHandler(t *testing.T) {
+	// Create a Shortener instance
+	shortener := NewShortener()
+	// Mocked request data
+	requestData := struct {
+		URL string `json:"url"`
+	}{
+		URL: "https://example.com",
+	}
+	// Convert requestData to JSON
+	requestBody, err := json.Marshal(requestData)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a mock POST request
+	req, err := http.NewRequest("POST", "/shorten", bytes.NewReader(requestBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response
+	rr := httptest.NewRecorder()
+
+	// Call the handler function
+	handler := http.HandlerFunc(shortener.ShortenHandler)
+	handler.ServeHTTP(rr, req)
+
+	// Check the response status code
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("Handler returned wrong status code: got %v, want %v", status, http.StatusOK)
+	}
+
+	// Check the response content type
+	expectedContentType := "application/json"
+	if ct := rr.Header().Get("Content-Type"); ct != expectedContentType {
+		t.Errorf("Handler returned wrong content type: got %v, want %v", ct, expectedContentType)
+	}
+
+	// Decode the response body
+	var responseData struct {
+		ShortURL string `json:"short_url"`
+	}
+	err = json.NewDecoder(rr.Body).Decode(&responseData)
+	if err != nil {
+		t.Errorf("Error decoding response body: %v", err)
 	}
 }

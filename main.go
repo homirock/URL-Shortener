@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	url "github.com/homirock/URL-Shortener"
+	url "github.com/homirock/URL-Shortener/handler"
 )
 
 func main() {
